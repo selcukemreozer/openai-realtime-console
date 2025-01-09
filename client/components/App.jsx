@@ -11,6 +11,39 @@ export default function App() {
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
 
+  // Send a message to the model
+  function sendClientEvent(message) {
+    if (dataChannel) {
+      message.event_id = message.event_id || crypto.randomUUID();
+      dataChannel.send(JSON.stringify(message));
+      setEvents((prev) => [message, ...prev]);
+    } else {
+      console.error(
+        "Failed to send message - no data channel available",
+        message,
+      );
+    }
+  }
+  // Send a text message to the model
+  function sendTextMessage(message) {
+    const event = {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: message,
+          },
+        ],
+      },
+    };
+
+    sendClientEvent(event);
+    sendClientEvent({ type: "response.create" });
+  }
+
   async function startSession() {
     // Get an ephemeral key from the Fastify server
     const tokenResponse = await fetch("/token");
@@ -57,6 +90,23 @@ export default function App() {
     await pc.setRemoteDescription(answer);
 
     peerConnection.current = pc;
+    
+    // Set a system prompt 
+    const systemPrompt = {
+      type: "conversation.item.create",
+      item: {
+        type: "system_prompt",
+        role: "system",
+        content: [
+          {
+            type: "text",
+            text: "Welcome to the session! How can I assist you today?",
+          },
+        ],
+      },
+    };
+  
+    sendTextMessage("Welcome to the session! How can I assist you today?");
   }
 
   // Stop current session, clean up peer connection and data channel
@@ -73,39 +123,7 @@ export default function App() {
     peerConnection.current = null;
   }
 
-  // Send a message to the model
-  function sendClientEvent(message) {
-    if (dataChannel) {
-      message.event_id = message.event_id || crypto.randomUUID();
-      dataChannel.send(JSON.stringify(message));
-      setEvents((prev) => [message, ...prev]);
-    } else {
-      console.error(
-        "Failed to send message - no data channel available",
-        message,
-      );
-    }
-  }
 
-  // Send a text message to the model
-  function sendTextMessage(message) {
-    const event = {
-      type: "conversation.item.create",
-      item: {
-        type: "message",
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: message,
-          },
-        ],
-      },
-    };
-
-    sendClientEvent(event);
-    sendClientEvent({ type: "response.create" });
-  }
 
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
