@@ -92,21 +92,6 @@ export default function App() {
     peerConnection.current = pc;
     
     // Set a system prompt 
-    const systemPrompt = {
-      type: "conversation.item.create",
-      item: {
-        type: "system_prompt",
-        role: "system",
-        content: [
-          {
-            type: "text",
-            text: "Welcome to the session! How can I assist you today?",
-          },
-        ],
-      },
-    };
-  
-    sendTextMessage("Welcome to the session! How can I assist you today?");
   }
 
   // Stop current session, clean up peer connection and data channel

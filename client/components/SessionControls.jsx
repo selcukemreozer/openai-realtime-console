@@ -12,6 +12,19 @@ function SessionStopped({ startSession }) {
     startSession();
   }
 
+  function handleSendClientEvent1() {
+    const [message, setMessage] = useState("");
+    setMessage("Hello, I'm a user!");
+    console.log(message);
+    sendTextMessage(message);
+    setMessage("");
+  }
+
+  function handleDouble(){
+    handleStartSession();
+    handleSendClientEvent1();
+  }
+
   return (
     <div className="flex items-center justify-center w-full h-full">
       <Button
