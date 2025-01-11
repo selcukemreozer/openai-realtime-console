@@ -21,15 +21,17 @@ function SessionStopped({ startSession }) {
     setMessage("");
   }
 
-  function handleDouble(){
+  function handleDouble() {
     handleStartSession();
-    handleSendClientEvent1();
+    setTimeout(() => {
+      handleSendClientEvent1();
+    }, 5000); // 2000 milliseconds = 2 seconds
   }
 
   return (
     <div className="flex items-center justify-center w-full h-full">
       <Button
-        onClick={handleStartSession}
+        onClick={handleDouble}
         className={isActivating ? "bg-gray-600" : "bg-red-600"}
         icon={<CloudLightning height={16} />}
       >
