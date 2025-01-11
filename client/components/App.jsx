@@ -91,7 +91,6 @@ export default function App() {
 
     peerConnection.current = pc;
     
-    // Set a system prompt 
   }
 
   // Stop current session, clean up peer connection and data channel

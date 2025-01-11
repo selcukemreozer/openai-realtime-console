@@ -4,7 +4,8 @@ import Button from "./Button";
 
 function SessionStopped({ startSession }) {
   const [isActivating, setIsActivating] = useState(false);
-
+  const [message, setMessage] = useState("");
+  
   function handleStartSession() {
     if (isActivating) return;
 
@@ -13,7 +14,7 @@ function SessionStopped({ startSession }) {
   }
 
   function handleSendClientEvent1() {
-    const [message, setMessage] = useState("");
+    
     setMessage("Hello, I'm a user!");
     console.log(message);
     sendTextMessage(message);
