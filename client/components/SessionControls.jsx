@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CloudLightning, CloudOff, MessageSquare } from "react-feather";
 import Button from "./Button";
 
-function SessionStopped({ startSession, sendTextMessage }) {
+function SessionStopped({ startSession, sendTextMessage, dataChannel }) {
   const [isActivating, setIsActivating] = useState(false);
   
   async function handleStartSession() {
@@ -10,15 +10,44 @@ function SessionStopped({ startSession, sendTextMessage }) {
 
     setIsActivating(true);
     try {
+      console.log("1. Session başlatılıyor...");
       await startSession();
       
-      // Session başladıktan sonra 2 saniye bekle
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log("2. DataChannel durumu:", dataChannel?.readyState);
       
-      // Sonra mesajı gönder
+      // DataChannel'ın açık olduğundan emin ol
+      await new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 100; // 10 saniye maksimum bekleme (artırıldı)
+
+        const checkChannel = () => {
+          attempts++;
+          console.log(`3. Deneme ${attempts}: DataChannel durumu:`, dataChannel?.readyState);
+          
+          if (dataChannel?.readyState === "open") {
+            console.log("4. DataChannel hazır!");
+            resolve();
+          } else if (attempts >= maxAttempts) {
+            reject(new Error("DataChannel bağlantı zaman aşımı"));
+          } else {
+            setTimeout(checkChannel, 100);
+          }
+        };
+
+        // İlk kontrol öncesi kısa bir bekleme ekleyelim
+        setTimeout(checkChannel, 1000);
+      });
+      
+      // Bağlantı kurulduktan sonra kısa bir bekleme ekleyelim
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log("5. İlk mesaj gönderiliyor...");
       await sendTextMessage("Merhaba, Ben Emre. Türkçe konuş.");
+      console.log("6. İlk mesaj gönderildi!");
+      
     } catch (error) {
       console.error("Session başlatma hatası:", error);
+    } finally {
       setIsActivating(false);
     }
   }
@@ -84,6 +113,7 @@ export default function SessionControls({
   sendTextMessage,
   serverEvents,
   isSessionActive,
+  dataChannel,
 }) {
   return (
     <div className="flex gap-4 border-t-2 border-gray-200 h-full rounded-md">
@@ -98,6 +128,7 @@ export default function SessionControls({
         <SessionStopped 
           startSession={startSession}
           sendTextMessage={sendTextMessage}
+          dataChannel={dataChannel}
         />
       )}
     </div>

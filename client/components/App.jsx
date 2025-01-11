@@ -45,52 +45,96 @@ export default function App() {
   }
 
   async function startSession() {
-    // Get an ephemeral key from the Fastify server
-    const tokenResponse = await fetch("/token");
-    const data = await tokenResponse.json();
-    const EPHEMERAL_KEY = data.client_secret.value;
+    try {
+        console.log("1. Session başlatılıyor...");
+        
+        // Get an ephemeral key from the Fastify server
+        const tokenResponse = await fetch("/token");
+        const data = await tokenResponse.json();
+        const EPHEMERAL_KEY = data.client_secret.value;
 
-    // Create a peer connection
-    const pc = new RTCPeerConnection();
+        console.log("2. Token alındı");
 
-    // Set up to play remote audio from the model
-    audioElement.current = document.createElement("audio");
-    audioElement.current.autoplay = true;
-    pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);
+        // Create a peer connection
+        const pc = new RTCPeerConnection();
+        console.log("3. RTCPeerConnection oluşturuldu");
 
-    // Add local audio track for microphone input in the browser
-    const ms = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
-    pc.addTrack(ms.getTracks()[0]);
+        // Set up to play remote audio from the model
+        audioElement.current = document.createElement("audio");
+        audioElement.current.autoplay = true;
+        pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);
 
-    // Set up data channel for sending and receiving events
-    const dc = pc.createDataChannel("oai-events");
-    setDataChannel(dc);
+        // Add local audio track for microphone input in the browser
+        const ms = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+        });
+        pc.addTrack(ms.getTracks()[0]);
+        console.log("4. Audio track eklendi");
 
-    // Start the session using the Session Description Protocol (SDP)
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+        // Önce offer oluştur
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        console.log("5. Local description ayarlandı");
 
-    const baseUrl = "https://api.openai.com/v1/realtime";
-    const model = "gpt-4o-realtime-preview-2024-12-17";
-    const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
-      method: "POST",
-      body: offer.sdp,
-      headers: {
-        Authorization: `Bearer ${EPHEMERAL_KEY}`,
-        "Content-Type": "application/sdp",
-      },
-    });
+        // API'ye bağlan
+        const baseUrl = "https://api.openai.com/v1/realtime";
+        const model = "gpt-4o-realtime-preview-2024-12-17";
+        const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+            method: "POST",
+            body: offer.sdp,
+            headers: {
+                Authorization: `Bearer ${EPHEMERAL_KEY}`,
+                "Content-Type": "application/sdp",
+            },
+        });
 
-    const answer = {
-      type: "answer",
-      sdp: await sdpResponse.text(),
-    };
-    await pc.setRemoteDescription(answer);
+        const answer = {
+            type: "answer",
+            sdp: await sdpResponse.text(),
+        };
+        await pc.setRemoteDescription(answer);
+        console.log("6. Remote description ayarlandı");
 
-    peerConnection.current = pc;
-    
+        // Şimdi DataChannel'ı oluştur
+        const dc = pc.createDataChannel("oai-events");
+        console.log("7. DataChannel oluşturuldu");
+
+        // DataChannel'ın açılmasını bekle
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error("DataChannel timeout"));
+            }, 15000); // 15 saniye bekle
+
+            dc.onopen = () => {
+                console.log("8. DataChannel açıldı!");
+                clearTimeout(timeout);
+                resolve();
+            };
+
+            dc.onerror = (error) => {
+                console.error("DataChannel hatası:", error);
+                clearTimeout(timeout);
+                reject(error);
+            };
+
+            // State değişikliklerini izle
+            dc.oniceconnectionstatechange = () => {
+                console.log("ICE Connection State:", pc.iceConnectionState);
+            };
+
+            dc.onstatechange = () => {
+                console.log("DataChannel State:", dc.readyState);
+            };
+        });
+
+        setDataChannel(dc);
+        peerConnection.current = pc;
+        console.log("9. Session başarıyla başlatıldı");
+
+    } catch (error) {
+        console.error("Session başlatma hatası:", error);
+        throw error;
+    }
   }
 
   // Stop current session, clean up peer connection and data channel
@@ -112,15 +156,24 @@ export default function App() {
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
     if (dataChannel) {
-      // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
+        console.log("Gelen mesaj:", JSON.parse(e.data));
         setEvents((prev) => [JSON.parse(e.data), ...prev]);
       });
 
-      // Set session active when the data channel is opened
       dataChannel.addEventListener("open", () => {
+        console.log("DataChannel açıldı!");
         setIsSessionActive(true);
         setEvents([]);
+      });
+
+      dataChannel.addEventListener("error", (error) => {
+        console.error("DataChannel hatası:", error);
+      });
+
+      dataChannel.addEventListener("close", () => {
+        console.log("DataChannel kapandı");
+        setIsSessionActive(false);
       });
     }
   }, [dataChannel]);
