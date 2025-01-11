@@ -2,28 +2,25 @@ import { useState } from "react";
 import { CloudLightning, CloudOff, MessageSquare } from "react-feather";
 import Button from "./Button";
 
-function SessionStopped({ startSession }) {
+function SessionStopped({ startSession, sendTextMessage }) {
   const [isActivating, setIsActivating] = useState(false);
-  const [message, setMessage] = useState("");
   
-  function handleStartSession() {
+  async function handleStartSession() {
     if (isActivating) return;
 
     setIsActivating(true);
-    startSession();
-  }
-
-  function handleSendClientEvent1() {
-    
-    setMessage("Hello, I'm a user!");
-    console.log(message);
-    sendTextMessage(message);
-    setMessage("");
-  }
-
-  function handleDouble(){
-    handleStartSession();
-    handleSendClientEvent1();
+    try {
+      await startSession();
+      
+      // Session başladıktan sonra 2 saniye bekle
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Sonra mesajı gönder
+      await sendTextMessage("Merhaba, Ben Emre. Türkçe konuş.");
+    } catch (error) {
+      console.error("Session başlatma hatası:", error);
+      setIsActivating(false);
+    }
   }
 
   return (
@@ -32,6 +29,7 @@ function SessionStopped({ startSession }) {
         onClick={handleStartSession}
         className={isActivating ? "bg-gray-600" : "bg-red-600"}
         icon={<CloudLightning height={16} />}
+        disabled={isActivating}
       >
         {isActivating ? "starting session..." : "start session"}
       </Button>
@@ -97,7 +95,10 @@ export default function SessionControls({
           serverEvents={serverEvents}
         />
       ) : (
-        <SessionStopped startSession={startSession} />
+        <SessionStopped 
+          startSession={startSession}
+          sendTextMessage={sendTextMessage}
+        />
       )}
     </div>
   );
