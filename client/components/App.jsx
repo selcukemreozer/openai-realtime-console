@@ -11,64 +11,26 @@ export default function App() {
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
 
-  // Send a message to the model
-  function sendClientEvent(message) {
-    if (dataChannel) {
-      message.event_id = message.event_id || crypto.randomUUID();
-      dataChannel.send(JSON.stringify(message));
-      setEvents((prev) => [message, ...prev]);
-    } else {
-      console.error(
-        "Failed to send message - no data channel available",
-        message,
-      );
-    }
-  }
-  // Send a text message to the model
-  function sendTextMessage(message) {
-    const event = {
-      type: "conversation.item.create",
-      item: {
-        type: "message",
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: message,
-          },
-        ],
-      },
-    };
-
-    sendClientEvent(event);
-    sendClientEvent({ type: "response.create" });
-  }
-
   async function startSession() {
-    // Get an ephemeral key from the Fastify server
     const tokenResponse = await fetch("/token");
     const data = await tokenResponse.json();
+    console.log("starting", data);
     const EPHEMERAL_KEY = data.client_secret.value;
 
-    // Create a peer connection
     const pc = new RTCPeerConnection();
 
-    // Set up to play remote audio from the model
     audioElement.current = document.createElement("audio");
     audioElement.current.autoplay = true;
     pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);
 
-    // Add local audio track for microphone input in the browser
     const ms = await navigator.mediaDevices.getUserMedia({
       audio: true,
     });
     pc.addTrack(ms.getTracks()[0]);
 
-    // Set up data channel for sending and receiving events
     const dc = pc.createDataChannel("oai-events");
     setDataChannel(dc);
 
-    // Start the session using the Session Description Protocol (SDP)
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
@@ -90,10 +52,8 @@ export default function App() {
     await pc.setRemoteDescription(answer);
 
     peerConnection.current = pc;
-    
   }
 
-  // Stop current session, clean up peer connection and data channel
   function stopSession() {
     if (dataChannel) {
       dataChannel.close();
@@ -107,20 +67,73 @@ export default function App() {
     peerConnection.current = null;
   }
 
+  function sendClientEvent(message) {
+    try {
+      if (dataChannel) {
+        message.event_id = message.event_id || crypto.randomUUID();
+        dataChannel.send(JSON.stringify(message));
+        console.log(response);
+        setEvents((prev) => [message, ...prev]);
+      } else {
+        console.error(
+          "Failed to send message - no data channel available",
+          message,
+        );
+      }
+    } catch (error) {
+      console.error("Failed to send message", error);
+    }
+  }
 
+  function sendTextMessage(message) {
+    const event = {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: message,
+          },
+        ],
+      },
+    };
 
-  // Attach event listeners to the data channel when a new one is created
+    sendClientEvent(event);
+    sendClientEvent({ type: "response.create" });
+  }
+
+  // mucahit's code: This function will be called when the channel is opened
+  function initiateAIIntroduction() {
+    const aiIntroMessage = {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "Hello! Can you introduce your self",
+          },
+        ],
+      },
+    };
+
+    dataChannel.send(JSON.stringify(aiIntroMessage));
+    sendClientEvent({ type: "response.create" });
+  }
+
   useEffect(() => {
     if (dataChannel) {
-      // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
         setEvents((prev) => [JSON.parse(e.data), ...prev]);
       });
 
-      // Set session active when the data channel is opened
       dataChannel.addEventListener("open", () => {
         setIsSessionActive(true);
         setEvents([]);
+        initiateAIIntroduction(); // Now it will introduce itself when the channel is opened
       });
     }
   }, [dataChannel]);
@@ -135,6 +148,7 @@ export default function App() {
       </nav>
       <main className="absolute top-16 left-0 right-0 bottom-0">
         <section className="absolute top-0 left-0 right-[380px] bottom-0 flex">
+          ;{" "}
           <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
             <EventLog events={events} />
           </section>

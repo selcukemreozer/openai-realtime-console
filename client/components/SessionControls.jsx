@@ -20,7 +20,7 @@ function SessionStopped({ startSession }) {
     sendTextMessage(message);
     setMessage("");
   }
-
+  // does not work
   function handleDouble() {
     handleStartSession();
     setTimeout(() => {
@@ -31,7 +31,7 @@ function SessionStopped({ startSession }) {
   return (
     <div className="flex items-center justify-center w-full h-full">
       <Button
-        onClick={handleDouble}
+        onClick={handleStartSession}
         className={isActivating ? "bg-gray-600" : "bg-red-600"}
         icon={<CloudLightning height={16} />}
       >
