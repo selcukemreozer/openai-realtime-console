@@ -88,53 +88,15 @@ export default function App() {
             },
         });
 
-        const answer = {
-            type: "answer",
-            sdp: await sdpResponse.text(),
-        };
-        await pc.setRemoteDescription(answer);
-        console.log("6. Remote description ayarlandı");
+    const answer = {
+      type: "answer",
+      sdp: await sdpResponse.text(),
+    };
+    await pc.setRemoteDescription(answer);
 
-        // Şimdi DataChannel'ı oluştur
-        const dc = pc.createDataChannel("oai-events");
-        console.log("7. DataChannel oluşturuldu");
-
-        // DataChannel'ın açılmasını bekle
-        await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error("DataChannel timeout"));
-            }, 15000); // 15 saniye bekle
-
-            dc.onopen = () => {
-                console.log("8. DataChannel açıldı!");
-                clearTimeout(timeout);
-                resolve();
-            };
-
-            dc.onerror = (error) => {
-                console.error("DataChannel hatası:", error);
-                clearTimeout(timeout);
-                reject(error);
-            };
-
-            // State değişikliklerini izle
-            dc.oniceconnectionstatechange = () => {
-                console.log("ICE Connection State:", pc.iceConnectionState);
-            };
-
-            dc.onstatechange = () => {
-                console.log("DataChannel State:", dc.readyState);
-            };
-        });
-
-        setDataChannel(dc);
-        peerConnection.current = pc;
-        console.log("9. Session başarıyla başlatıldı");
-
-    } catch (error) {
-        console.error("Session başlatma hatası:", error);
-        throw error;
-    }
+    peerConnection.current = pc;
+    
+    // Set a system prompt 
   }
 
   // Stop current session, clean up peer connection and data channel
