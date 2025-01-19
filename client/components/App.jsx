@@ -114,7 +114,7 @@ export default function App() {
         content: [
           {
             type: "input_text",
-            text: "Hello! Can you introduce your self",
+            text: "sen demografik bilgi toplama asistanisin. Simdi seni kullaniciyla konusturacagim. Kendini tanitip 3 soru sormalisin. Sorulari sirayla sormalisin. Kullanicilar hepsini aklinda tutamaz. 1- Yasiniz kac? 2- Nerede yasiyorsunuz? 3- Mesleginiz nedir? Basla.",
           },
         ],
       },
